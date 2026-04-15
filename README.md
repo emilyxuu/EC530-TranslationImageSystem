@@ -2,13 +2,17 @@
 ## Event-Driven Image Text Recognition and Translation System
 
 ## Overview
-This project is a modular, event-driven image-processing pipeline. It uses Redis publish-subscribe (pub-sub) messaging to coordinate services asynchronously. The inspiration of this project topic is to be able to build a system that works to help those with language barriers understand important information.
+This project is a modular, event-driven image-processing pipeline. It uses Redis publish-subscribe (pub-sub) messaging to coordinate services asynchronously.
+The inspiration of this project topic is to be able to build a system that works to help those with language barriers understand important information, for example, reading a foreign road sign or document and receiving an instant English translation (and help my immigrant parents overcome simple but important language barriers better than my younger self could).
 
 ## Project Structure
+* `app/topics.py`: All Redis topic name constants (single source of truth).
+* `app/config.py`: Redis connection settings.
 * `app/broker.py`: The Redis pub-sub wrapper for passing messages.
+* `app/schemas.py`: Helper that builds valid event messages.
+* `app/repository.py`: In-memory document store with idempotency (MongoDB placeholder).
 * `app/event_generator.py`: Generates mocked events deterministically for testing.
-* `app/schemas.py`: Defines the required fields each event message must contain.
-* `app/services/`: Contains the microservices (Upload, Inference, Document DB, etc.).
+* `app/services/`: Contains the microservices.
 * `tests/`: Contains the `pytest` suite proving system robustness and idempotency.
 
 ```
@@ -16,28 +20,25 @@ event-driven-image-system/
 │
 ├── README.md
 ├── requirements.txt
-├── .env.example
-├── docker-compose.yml
 │
 ├── docs/
-│   ├── architecture.md
 │   └── topics_and_messages.md
 │
 ├── app/
-│   ├── main.py
-│   ├── config.py
-│   ├── topics.py
-│   ├── schemas.py
-│   ├── broker.py
-│   ├── event_generator.py
-│   ├── repository.py
+│   ├── main.py                        # Demo runner (no Redis needed)
+│   ├── config.py                      # Redis connection settings
+│   ├── topics.py                      # All topic name constants
+│   ├── schemas.py                     # create_base_event() helper
+│   ├── broker.py                      # Redis pub-sub wrapper
+│   ├── event_generator.py             # Deterministic test event generator
+│   ├── repository.py                  # In-memory document store
 │   │
 │   ├── services/
-│   │   ├── upload_service.py
-│   │   ├── inference_service.py
-│   │   ├── document_db_service.py
-│   │   ├── embedding_service.py
-│   │   └── vector_index_service.py
+│   │   ├── upload_service.py          # Publishes image.submitted
+│   │   ├── ocr_translation_service.py # OCR stub → publishes inference.completed
+│   │   ├── document_db_service.py     # Stores annotation → publishes annotation.stored
+│   │   ├── embedding_service.py       # Stub → publishes embedding.created (Week 2)
+│   │   └── vector_index_service.py    # Stub → FAISS vector search (Week 2)
 │   │
 │   └── sample_data/
 │       └── sample_events.json
@@ -54,27 +55,55 @@ event-driven-image-system/
 ```
 
 ## Event Pipeline
-Services communicate via events and do not bypass the broker.
-1. **User Uploads Image** -> `Upload Service` publishes `image.submitted`
-2. **OCR & Translation Service** -> Listens to `image.submitted`, extracts/translates text, and publishes `inference.completed`
-3. **Document DB Service** -> Listens to `inference.completed`, stores annotations, and publishes `annotation.stored`
-4. **Embedding Service** -> Listens to `annotation.stored`, publishes `embedding.created`
-5. **Vector Index Service** -> Placeholder for future semantic search.
+
+```
+User Uploads Image
+      │
+      ▼
+[Upload Service] ──────────────────────▶ image.submitted
+      │
+      ▼
+[OCR & Translation Service] ───────────▶ inference.completed
+  (detects text, identifies language, translates to English)
+      │
+      ▼
+[Document DB Service] ─────────────────▶ annotation.stored
+  (stores flexible JSON doc per image)
+      │
+      ▼
+[Embedding Service] ───────────────────▶ embedding.created   ← Week 2
+      │
+      ▼
+[Vector Index Service]                                        ← Week 2
+  (FAISS semantic search over extracted text)
+```
 
 ## Setup & Prerequisites
 1. Install dependencies: `pip install -r requirements.txt`
-2. Start the Redis broker using Docker: `docker-compose up -d`
+2. Start the Redis broker: `docker-compose up -d`
 
-## Running the Application (Live Services)
-To run the live pipeline, open separate terminals for each service:
-* **Terminal 1:** `python -m app.services.inference_service`
-* **Terminal 2:** `python -m app.services.document_db_service`
-* **Terminal 3:** `python -m app.main`
+## Running the Demo (No Redis Needed)
+```bash
+python -m app.main
+```
+
+## Running the Live Pipeline (Redis Required)
+Open a separate terminal for each service:
+```bash
+# Terminal 1
+python -m app.services.ocr_translation_service
+
+# Terminal 2
+python -m app.services.document_db_service
+
+# Terminal 3 — triggers the pipeline
+python -m app.services.upload_service
+```
 
 ## Running Unit Tests
-The test suite proves system robustness, idempotency, and schema validation. You can run the tests independently of the live services.
-Run the following command from the root directory:
-`pytest tests/ -v`
+```bash
+pytest tests/ -v
+```
 
 ## LLM Usage
 * Every unit test BUT THE FIRST TEST was generated using an LLM.
