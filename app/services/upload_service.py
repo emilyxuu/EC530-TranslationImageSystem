@@ -2,14 +2,15 @@ import sys
 import os
 import time
 
-# This line helps Python find my 'app' folder so we can import preexisting broker and schemas
+# This line helps Python find my 'app' folder so we can import preexisting broker and schemas.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import publish_message
 from app.schemas import create_base_event
+from app.topics import IMAGE_SUBMITTED
 
 # The topic I want to shout my message to
-TOPIC_OUT = "image.submitted"
+TOPIC_OUT = IMAGE_SUBMITTED # This is the topic that the OCR & Translation Service listens to for new images
 
 def simulate_upload():
     """Pretends a user uploaded a photo from their phone."""
@@ -25,7 +26,7 @@ def simulate_upload():
     
     # Publish it to Redis!
     publish_message(TOPIC_OUT, new_event)
-    print("✅ Upload complete. Message sent to the broker!")
+    print("Upload complete. Message sent to the broker!")
 
 if __name__ == "__main__":
     # Wait a couple of seconds just to make reading the terminal easier

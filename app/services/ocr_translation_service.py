@@ -6,11 +6,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import subscribe_to, publish_message
 from app.schemas import create_base_event
+from app.topics import IMAGE_SUBMITTED, INFERENCE_COMPLETED
 
 # Configuration
 SERVICE_NAME = "OCR & Translation Service"
-TOPIC_IN = "image.submitted"
-TOPIC_OUT = "inference.completed"
+TOPIC_IN = IMAGE_SUBMITTED  # This is the topic we listen to for new images
+TOPIC_OUT = INFERENCE_COMPLETED  # This is the topic we publish our OCR results to
 
 def process_event(event_data: dict):
     """This runs every single time an image is uploaded."""
@@ -40,7 +41,7 @@ def process_event(event_data: dict):
         "detected_text": "Arrêt",
         "source_language": "fr",
         "translation_english": "Stop",
-        "confidence_score": 0.98
+        "confidence_score": 0.98 # This is a made-up confidence score for demonstration. In a real system, the OCR/translation model would provide this.
     }
     
     # Publish the new event to Redis so other services can use it

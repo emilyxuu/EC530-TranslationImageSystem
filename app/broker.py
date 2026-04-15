@@ -1,18 +1,17 @@
-# app/broker.py
 import json
 import redis
+from app.config import REDIS_HOST, REDIS_PORT, REDIS_DB
 
-# CONNECT TO REDIS
-# This line connects my Python code to the Redis server running on my computer.
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Connect to Redis using config.py
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
 
 def publish_message(topic: str, message_dict: dict):
     """
     Takes a Python dictionary, turns it into text (JSON), and sends it to a specific topic.
     """
     try:
-        # Computers send data over networks as text. 
-        # json.dumps() converts our Python dictionary into a text string.
+        # Computers send data over networks as text
+        # json.dumps() converts our Python dictionary into a text string
         json_data = json.dumps(message_dict)
         
         # Publish it to Redis
@@ -40,8 +39,8 @@ def subscribe_to(topic: str, callback_function):
     # This is an infinite loop. It will just sit here and wait for messages.
     for message in pubsub.listen():
         
-        # Redis sends some behind-the-scenes setup messages first. 
-        # We only care about actual 'message' types.
+        # Redis sends some behind-the-scenes setup messages first
+        # We only care about actual 'message' types
         if message['type'] == 'message':
             
             # Turn the text string back into a Python dictionary

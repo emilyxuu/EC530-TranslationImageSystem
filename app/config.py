@@ -1,0 +1,3 @@
+REDIS_HOST = "localhost" # If your Redis server is running on the same machine as this code, "localhost" works. Otherwise, put the IP address of the machine where Redis is running.
+REDIS_PORT = 6379 # This is the default port for Redis. If you changed it when setting up Redis, update this value. Otherwise, leave it as is.
+REDIS_DB   = 0 # Redis can have multiple "databases" numbered 0-15. You can use this to keep data separate for different projects, but for this tutorial we just need one.
