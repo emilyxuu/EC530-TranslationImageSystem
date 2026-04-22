@@ -117,3 +117,20 @@ def build_parser():
     p_search.add_argument("--top-k", type=int, default=5, help="Max results (default: 5)")
     
     return parser
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    
+    if args.command == "upload":
+        cmd_upload(args.path, source=args.source)
+        
+        
+        
+    elif args.command == "search":
+     
+        cmd_search(args.query, top_k=args.top_k)
+
+
+if __name__ == "__main__":
+    main()
