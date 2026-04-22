@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import subscribe_to, publish_message
-from app.schemas import create_base_event
+from app.schemas import is_valid_event, create_base_event
 from app.topics import IMAGE_SUBMITTED, INFERENCE_COMPLETED
 
 # Configuration
@@ -17,7 +17,7 @@ def process_event(event_data: dict):
     """This runs every single time an image is uploaded."""
     
     # Check if the message has the fields we expect. If not, print an error and ignore it.
-    if "payload" not in event_data:
+    if not is_valid_event(event_data):
         print(f"[{SERVICE_NAME}] ERROR: Malformed event received. Dropping message.")
         return 
         
