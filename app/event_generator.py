@@ -77,3 +77,8 @@ class EventGenerator:
         bad_event = self._rng.choice(broken_shapes)    # pick one
         self.publish(topic, bad_event)                  # publish it
         return bad_event                                # return it
+    
+    def inject_drop(self, event):
+        # Deliberately do NOT call self._publisher — that's the whole point
+        # append a marker to self.published_events so tests can see a drop happened
+        self.published_events.append({"_dropped": True, "event": event})
