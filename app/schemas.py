@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 def create_base_event(topic: str, image_id: str, path: str, source: str) -> dict:
     """
@@ -17,7 +17,7 @@ def create_base_event(topic: str, image_id: str, path: str, source: str) -> dict
         "event_id": str(uuid.uuid4()), 
         
         # This automatically stamps the message with the current date and time
-        "timestamp": datetime.utcnow().isoformat(), 
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         
         # The payload holds the actual data about the image
         "payload": {

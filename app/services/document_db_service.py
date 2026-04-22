@@ -1,6 +1,6 @@
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -40,7 +40,7 @@ def process_event(event_data: dict):
         "translation_english": annotations.get("translation_english", ""),
         "confidence_score":    annotations.get("confidence_score", 0.0),
         "status": "stored",
-        "stored_at": datetime.utcnow().isoformat(),
+        "stored_at": datetime.now(timezone.utc).isoformat(),
     }
 
     # insert() silently ignores duplicate image_ids (idempotency)
