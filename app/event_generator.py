@@ -61,3 +61,7 @@ class EventGenerator:
             events.append(event)
       
         return events
+    
+    def inject_duplicate(self, event):
+        self.publish(event["topic"], event)
+        
