@@ -32,3 +32,68 @@ def cmd_upload(path, source="cli"):
     
     print(f"Uploaded: {path} (image_id={image_id})")
     return image_id
+
+def cmd_search(query_text, top_k=5):
+    """Publish query.submitted and wait for the matching query.completed."""
+    
+    # Make a unique ID so we can tell our response apart from anyone else's
+    query_id = f"q_{uuid.uuid4().hex[:8]}"
+    
+    # Subscribe BEFORE publishing — otherwise we could miss the response
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe(QUERY_COMPLETED)
+    
+    # build the query.submitted event with create_base_event
+   
+    event = create_base_event(
+        topic=QUERY_SUBMITTED,
+        payload={
+            "query_id": query_id,
+            "text": query_text,
+            "top_k": top_k,
+        },
+    )  
+    
+    # publish the event with publish_message
+    
+    publish_message(event["topic"], event)
+    
+    print(f"Searching for: '{query_text}' (query_id={query_id})")
+    
+    # Calculate when we should give up
+    deadline = time.time() + QUERY_TIMEOUT_SECONDS
+    
+    # Loop until we get our response or the deadline passes
+    while time.time() < deadline:
+        # Wait up to 1 second for a message
+        message = pubsub.get_message(timeout=1.0)
+        
+        # Skip Redis setup messages and None (nothing arrived)
+        if message is None or message["type"] != "message":
+            continue
+        
+        # Try to decode the JSON. If it fails, skip it (slide 10 robustness).
+        try:
+            response = json.loads(message["data"])
+        except json.JSONDecodeError:
+            continue
+        
+        # Is this response for OUR query? Check the query_id inside the payload.
+        response_query_id = response.get("payload", {}).get("query_id")
+        if response_query_id != query_id:
+            continue
+        
+        # Found our response. Print results.
+        results = response["payload"].get("results", [])
+        print(f"\nFound {len(results)} result(s):")
+        for i, hit in enumerate(results, 1):
+            print(f"  {i}. {hit.get('image_id')}: "
+                  f"{hit.get('detected_text')!r} -> {hit.get('translation_english')!r}")
+        
+        pubsub.close()
+        return results
+    
+    # If we got here, we timed out
+    pubsub.close()
+    print(f"No response received within {QUERY_TIMEOUT_SECONDS}s. Is the Query Service running?")
+    return None
