@@ -5,7 +5,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import subscribe_to, publish_message
-from app.schemas import create_base_event
+from app.schemas import is_valid_event, create_base_event
 from app.repository import InMemoryRepository
 from app.topics import INFERENCE_COMPLETED, ANNOTATION_STORED
 
@@ -19,7 +19,7 @@ def process_event(event_data: dict):
     """Called every time an inference.completed message arrives."""
 
     # Drop anything missing a payload
-    if "payload" not in event_data:
+    if not is_valid_event(event_data):
         print(f"[{SERVICE_NAME}] ERROR: Malformed event. Dropping.")
         return
 
