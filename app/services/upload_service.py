@@ -16,9 +16,11 @@ def simulate_upload():
     # Create the event using my strict schema rules
     new_event = create_base_event(
         topic=TOPIC_OUT,
-        image_id="sign_001",
-        path="/uploads/french_stop_sign.jpg",
-        source="mobile_app"
+        payload={
+            "image_id": "sign_001",
+            "path": "/uploads/french_stop_sign.jpg",
+            "source": "mobile_app",
+        },
     )
     
     # Publish it to Redis!

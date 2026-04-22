@@ -1,30 +1,20 @@
 import uuid
 from datetime import datetime, timezone
 
-def create_base_event(topic: str, image_id: str, path: str, source: str) -> dict:
+def create_base_event(topic: str, payload: dict) -> dict:
     """
-    This is a helper function.
-    Instead of typing out everything every time we want to send a message, we just call this function.
-    
-    It ensures every message has the required fields: topic, event_id, timestamp, and payload.
+    Build a valid event with a generic payload.
+
+    Every event has the four required fields (topic, event_id, timestamp,
+    payload). The payload itself is topic-specific — image events carry
+    image_id/path/source, query events carry query_id/text/top_k, etc.
     """
     return {
         "type": "event",
         "topic": topic,
-        
-        # uuid.uuid4() generates a random, unique ID (like '123e4567-e89b-12d3...').
-        # This is important to know if any message accidentally get received more than once.
-        "event_id": str(uuid.uuid4()), 
-        
-        # This automatically stamps the message with the current date and time
+        "event_id": str(uuid.uuid4()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        
-        # The payload holds the actual data about the image
-        "payload": {
-            "image_id": image_id,
-            "path": path,
-            "source": source
-        }
+        "payload": payload,
     }
     
 def is_valid_event(event):

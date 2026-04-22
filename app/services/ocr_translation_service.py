@@ -26,19 +26,19 @@ def process_event(event_data: dict):
     
     # Create a new event with the same base information but add our new annotations to the payload
     new_event = create_base_event(
-        topic=TOPIC_OUT, 
-        image_id=image_id, 
-        path=event_data["payload"].get("path", ""),
-        source=event_data["payload"].get("source", "")
+        topic=TOPIC_OUT,
+        payload={
+            "image_id": image_id,
+            "path": event_data["payload"].get("path", ""),
+            "source": event_data["payload"].get("source", ""),
+            "annotations": {
+                "detected_text": "Arrêt",
+                "source_language": "fr",
+                "translation_english": "Stop",
+                "confidence_score": 0.98,
+            },
+        },
     )
-    
-    # Add the OCR and translation results to the payload under a new "annotations" field
-    new_event["payload"]["annotations"] = {
-        "detected_text": "Arrêt",
-        "source_language": "fr",
-        "translation_english": "Stop",
-        "confidence_score": 0.98 # This is a made-up confidence score for demonstration. In a real system, the OCR/translation model would provide this.
-    }
     
     # Publish the new event to Redis so other services can use it
     publish_message(TOPIC_OUT, new_event)
