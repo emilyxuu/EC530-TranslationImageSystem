@@ -46,3 +46,18 @@ class EventGenerator:
                 "source" : source,
             },
         )
+    
+    #generates 'count' events and publishes each one
+    def generate_batch(self, count):
+        events = []
+        # loop `count` times
+        #   - build an event with self.generate_image_submitted()
+        #   - publish it with self.publish(IMAGE_SUBMITTED, event)
+        #   - append it to the events list
+      
+        for i in range(count):
+            event = self.generate_image_submitted()
+            self.publish(IMAGE_SUBMITTED, event)
+            events.append(event)
+      
+        return events
