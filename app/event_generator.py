@@ -64,4 +64,16 @@ class EventGenerator:
     
     def inject_duplicate(self, event):
         self.publish(event["topic"], event)
+    
+    def inject_malformed(self, topic=IMAGE_SUBMITTED):
+        broken_shapes = [
+            {"topic": topic},                                            # missing event_id, timestamp, payload
+            {"event_id": "evt_x", "payload": {}},                        # missing topic, timestamp
+            {"topic": topic, "event_id": "evt_x", "timestamp": "now",
+             "payload": "not-a-dict"},                                   # payload wrong type
+            {},                                                          # empty dict
+        ]
         
+        bad_event = self._rng.choice(broken_shapes)    # pick one
+        self.publish(topic, bad_event)                  # publish it
+        return bad_event                                # return it
