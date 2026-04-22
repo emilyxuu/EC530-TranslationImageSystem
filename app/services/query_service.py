@@ -42,3 +42,45 @@ def search_documents(query_text, top_k=5):
     # return the first top_k matches
    
     return matches[:top_k]
+
+def process_event(event_data):
+    """Handle a query.submitted event and publish query.completed."""
+    
+    #reject malformed events with is_valid_event
+   
+    if not is_valid_event(event_data):
+        return
+    
+    # Pull the query details out of the payload
+    payload = event_data["payload"]
+    query_id = payload.get("query_id", "unknown")
+    query_text = payload.get("text", "")
+    top_k = payload.get("top_k", 5)
+    
+    print(f"[{SERVICE_NAME}] Received query '{query_text}' (query_id={query_id})")
+    
+    #call search_documents(query_text, top_k) and store the result in `results`
+    results = search_documents(query_text, top_k)
+    
+    #build the response event with create_base_event
+   
+    response = create_base_event(
+        topic=QUERY_COMPLETED,
+        payload={
+            "query_id": query_id,
+            "text": query_text,
+            "results": results,
+            "result_count": len(results),
+        },
+    )
+    
+    
+    #  publish the response with publish_message
+    publish_message(QUERY_COMPLETED, response)
+    
+    print(f"[{SERVICE_NAME}] Published query.completed with {len(results)} result(s)")
+    
+
+if __name__ == "__main__":
+    print(f"Starting {SERVICE_NAME}...")
+    subscribe_to(QUERY_SUBMITTED, process_event)
