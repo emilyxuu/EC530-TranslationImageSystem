@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+
+# Environment variables (slide 18: NOT in git)
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.egg-info/
+build/
+dist/

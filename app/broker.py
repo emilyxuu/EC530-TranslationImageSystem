@@ -1,10 +1,15 @@
 import json
 import redis
-from app.config import REDIS_HOST, REDIS_PORT, REDIS_DB
+from app.config import REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD
 
 # Connect to Redis using config.py
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
-
+redis_client = redis.Redis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_DB,
+    password=REDIS_PASSWORD,
+    decode_responses=True,
+)
 def publish_message(topic: str, message_dict: dict):
     """
     Takes a Python dictionary, turns it into text (JSON), and sends it to a specific topic.

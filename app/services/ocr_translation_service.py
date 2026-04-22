@@ -1,8 +1,4 @@
-import sys
-import os
 
-# Let Python find the 'app' folder
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import subscribe_to, publish_message
 from app.schemas import is_valid_event, create_base_event

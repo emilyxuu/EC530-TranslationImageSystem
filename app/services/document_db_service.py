@@ -1,8 +1,6 @@
-import sys
-import os
+
 from datetime import datetime, timezone
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import subscribe_to, publish_message
 from app.schemas import is_valid_event, create_base_event

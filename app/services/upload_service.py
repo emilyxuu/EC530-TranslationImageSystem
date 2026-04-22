@@ -1,9 +1,6 @@
-import sys
-import os
+
 import time
 
-# This line helps Python find my 'app' folder so we can import preexisting broker and schemas.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from app.broker import publish_message
 from app.schemas import create_base_event
