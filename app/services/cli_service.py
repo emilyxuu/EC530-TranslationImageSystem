@@ -97,3 +97,23 @@ def cmd_search(query_text, top_k=5):
     pubsub.close()
     print(f"No response received within {QUERY_TIMEOUT_SECONDS}s. Is the Query Service running?")
     return None
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="cli_service",
+        description="EC530 Image Annotation & Retrieval CLI",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    
+    # upload subcommand
+    p_upload = subparsers.add_parser("upload", help="Upload an image for processing")
+    p_upload.add_argument("path", help="Path to the image file")
+    p_upload.add_argument("--source", default="cli", help="Source label (default: cli)")
+    
+    # search subcommand
+    p_search = subparsers.add_parser("search", help="Search stored images by text")
+    p_search.add_argument("query", help="Text to search for")
+    p_search.add_argument("--top-k", type=int, default=5, help="Max results (default: 5)")
+    
+    return parser
