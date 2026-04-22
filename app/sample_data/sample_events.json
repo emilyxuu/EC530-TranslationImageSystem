@@ -1,0 +1,32 @@
+[
+  {
+    "topic": "image.submitted",
+    "event_id": "evt_0001",
+    "timestamp": "2026-04-21T10:00:00+00:00",
+    "payload": {
+      "image_id": "sign_001",
+      "path": "images/french_stop.jpg",
+      "source": "replay"
+    }
+  },
+  {
+    "topic": "image.submitted",
+    "event_id": "evt_0002",
+    "timestamp": "2026-04-21T10:00:01+00:00",
+    "payload": {
+      "image_id": "sign_002",
+      "path": "images/spanish_yield.jpg",
+      "source": "replay"
+    }
+  },
+  {
+    "topic": "image.submitted",
+    "event_id": "evt_0003",
+    "timestamp": "2026-04-21T10:00:02+00:00",
+    "payload": {
+      "image_id": "sign_003",
+      "path": "images/german_exit.jpg",
+      "source": "replay"
+    }
+  }
+]
