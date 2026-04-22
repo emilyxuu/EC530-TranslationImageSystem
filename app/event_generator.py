@@ -82,3 +82,8 @@ class EventGenerator:
         # Deliberately do NOT call self._publisher — that's the whole point
         # append a marker to self.published_events so tests can see a drop happened
         self.published_events.append({"_dropped": True, "event": event})
+        
+    def inject_delayed(self, event, delay_seconds):
+        time.sleep(delay_seconds)
+        self.publish(event["topic"], event)     
+        
