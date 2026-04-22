@@ -86,4 +86,19 @@ class EventGenerator:
     def inject_delayed(self, event, delay_seconds):
         time.sleep(delay_seconds)
         self.publish(event["topic"], event)     
+    
+    def replay_from_file(self, path):
+        # open the file at `path` and load the JSON
+        # Hint: use `with open(path) as f:` and `json.load(f)`
+        with open(path) as f:
+            events = json.load(f)
         
+        # loop through the events and publish each one
+        #       use event["topic"] as the topic argument
+        for event in events:
+            self.publish(event["topic"], event)
+        
+        # return the events
+        return events
+    
+    
