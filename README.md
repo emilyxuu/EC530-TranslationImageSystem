@@ -90,19 +90,20 @@ python -m app.main
 ## Running the Live Pipeline (Redis Required)
 Open a separate terminal for each service:
 ```bash
-# Terminal 1
+# Terminal 1: OCR
 python -m app.services.ocr_translation_service
 
-# Terminal 2
+# Terminal 2: DocDB
 python -m app.services.document_db_service
 
-# Terminal 3 — triggers the pipeline
-python -m app.services.query_service
+# Terminal 3: Embedding
+python -m app.services.embedding_service
 
-#Terminal 4
-python -m app.services.cli_service upload /uploads/french_stop.jpg
-python -m app.services.cli_service search stop
-```
+# Terminal 4: Vector Index
+python -m app.services.vector_index_service
+
+# Terminal 5: Query
+python -m app.services.query_service
 
 sudo service redis-server start
 redis-cli ping

@@ -1,8 +1,54 @@
 from app.broker import subscribe_to, publish_message
 from app.schemas import create_base_event, is_valid_event
-from app.topics import QUERY_SUBMITTED, QUERY_COMPLETED, ANNOTATION_STORED
+from app.topics import QUERY_SUBMITTED, QUERY_COMPLETED, ANNOTATION_STORED, EMBEDDING_CREATED
+import math
+import json
+from pathlib import Path
 import threading
 SERVICE_NAME = "Query Service"
+
+
+# Path to the dataset — needed for the label_embeddings used to convert
+# search queries into vectors.
+DATASET_PATH = Path("app/sample_data/embeddings.json")
+
+# Local view of documents, built from annotation.stored events.
+_local_store = {}
+
+def _dot_product(a, b):
+    return sum(x * y for x, y in zip(a, b))
+
+def _norm(v):
+    return math.sqrt(sum(x * x for x in v))
+
+def _cosine_similarity(a, b):
+    norm_a = _norm(a)
+    norm_b = _norm(b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return _dot_product(a, b) / (norm_a * norm_b)
+
+def handle_embedding_created(event_data):
+    """Subscriber: when a new embedding arrives, add it to our vector index."""
+    if not is_valid_event(event_data):
+        return
+    
+    payload = event_data["payload"]
+    image_id = payload.get("image_id")
+    embedding = payload.get("embedding")
+    
+    if not image_id or not embedding:
+        return
+    
+    _vector_index[image_id] = embedding
+    print(f"[{SERVICE_NAME}] Indexed vector for {image_id} (index size: {len(_vector_index)})")
+# Local view of the vector index, built from embedding.created events.
+_vector_index = {}
+
+# Load label embeddings at startup so we can map "stop" → query vector.
+with open(DATASET_PATH) as f:
+    _label_embeddings = json.load(f)["label_embeddings"]
+print(f"[{SERVICE_NAME}] Loaded {len(_label_embeddings)} label embeddings")
 # Local view of documents, built from annotation.stored events.
 # This is proper event-sourcing — the Query Service doesn't share memory
 # with the Document DB service; it subscribes to annotation.stored and
@@ -21,33 +67,53 @@ def handle_annotation_stored(event_data):
         
 def search_documents(query_text, top_k=5):
     """
-    Stub search: return documents whose detected_text or translation_english
-    contains the query (case-insensitive).
+    Vector similarity search.
     
-    Week 2 replaces this with FAISS vector similarity. The function signature
-    stays the same so callers don't change.
+    Steps:
+      1. Convert the user's query text into a query vector by looking up
+         the matching label in _label_embeddings.
+      2. Compute cosine similarity between the query vector and every
+         stored image vector in _vector_index.
+      3. Return the top_k matches, enriched with document fields from _local_store.
     """
-    # Lowercase the query once so we can compare case-insensitively
     query_lower = query_text.lower()
     
+    # find the query vector by checking each label in _label_embeddings.
+    #       Match if the label appears in query_lower (substring match).
+    #       If no label matches, return [] (no results).
+    #       Hint: for label, vector in _label_embeddings.items(): ...
+    query_vector = None
+    for label, vector in _label_embeddings.items():
+        if label in query_lower:
+            query_vector = vector
+            break
+    
+    if query_vector is None:
+        print(f"[{SERVICE_NAME}] No matching label for query '{query_text}'")
+        return []
+    
+    # compute similarity for every (image_id, stored_vector) in _vector_index.
+    #       Append a dict to `matches` with image_id and score.
     matches = []
+
+    for image_id, stored_vector in _vector_index.items():
+        score = _cosine_similarity(query_vector, stored_vector)
+        matches.append({"image_id": image_id, "score": score})
+    # Sort highest score first
+    matches.sort(key=lambda m: m["score"], reverse=True)
     
-    # loop through every document in document_db_service.repo
- 
-    for image_id, doc in _local_store.items():
-        detected = doc.get("detected_text", "").lower()
-        translated = doc.get("translation_english", "").lower()
-        if query_lower in detected or query_lower in translated:
-            matches.append({
-                "image_id": image_id,
-                "detected_text": doc.get("detected_text", ""),
-                "translation_english": doc.get("translation_english", ""),
-                "score": 1.0,
-            })
+    # Trim to top_k
+    matches = matches[:top_k]
     
-    # return the first top_k matches
-   
-    return matches[:top_k]
+    # Enrich results with detected_text and translation_english from _local_store
+    # so the CLI can display them. _local_store may not have every image_id
+    # (events can arrive out of order), so use .get() with empty fallback.
+    for m in matches:
+        doc = _local_store.get(m["image_id"], {})
+        m["detected_text"] = doc.get("detected_text", "")
+        m["translation_english"] = doc.get("translation_english", "")
+    
+    return matches
 
 def process_event(event_data):
     """Handle a query.submitted event and publish query.completed."""
@@ -90,13 +156,21 @@ def process_event(event_data):
 if __name__ == "__main__":
     print(f"Starting {SERVICE_NAME}...")
 
-    # Thread 1: listen for annotation.stored to build the local index
-    t = threading.Thread(
+    # Thread 1: listen for annotation.stored to build the local document store
+    t1 = threading.Thread(
         target=subscribe_to,
         args=(ANNOTATION_STORED, handle_annotation_stored),
         daemon=True,
     )
-    t.start()
+    t1.start()
 
-    # Main thread: listen for query.submitted
+    # Thread 2: listen for embedding.created to build the local vector index
+    t2 = threading.Thread(
+        target=subscribe_to,
+        args=(EMBEDDING_CREATED, handle_embedding_created),
+        daemon=True,
+    )
+    t2.start()
+
+    # Main thread: listen for query.submitted (this is what the CLI sends)
     subscribe_to(QUERY_SUBMITTED, process_event)
