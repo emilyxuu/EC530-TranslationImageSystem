@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 
 from app.broker import subscribe_to, publish_message
 from app.schemas import is_valid_event, create_base_event
-from app.repository import InMemoryRepository
+from app.repository import DocumentRepository
 from app.topics import INFERENCE_COMPLETED, ANNOTATION_STORED
 
 SERVICE_NAME = "Document DB Service"
 
 # One shared repository instance for this process
 # Need to swap this out for a real MongoDB client
-repo = InMemoryRepository()
+repo = DocumentRepository()
 
 def process_event(event_data: dict):
     """Called every time an inference.completed message arrives."""

@@ -1,47 +1,51 @@
-# Placeholder for MongoDB (Week 2).
-#
-# Each image gets one document stored under its image_id.
-# Built-in idempotency: if the same image_id arrives twice,
-# the second insert is silently ignored so we never store duplicates.
-#
-# The document format matches what DocumentDBService saves:
-# {
-#   "image_id": "sign_001",
-#   "detected_text": "Arrêt",
-#   "source_language": "fr",
-#   "translation_english": "Stop",
-#   "confidence_score": 0.98,
-#   "status": "stored",
-#   "stored_at": "2026-..."
-# }
+from pathlib import Path
+from tinydb import TinyDB, Query
 
-class InMemoryRepository:
 
-    def __init__(self):
-        # Simple dictionary: { image_id (str) -> document (dict) }
-        self._store = {}
+class DocumentRepository:
+    def __init__(self, db_path="data/documents.json"):
+        # Make sure the parent folder exists before TinyDB tries to
+        # create the file. mkdir(exist_ok=True) won't error if it's there.
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        # Open (or create) the database
+        self._db = TinyDB(db_path)
+        
+        # The Query() object is reusable — keep one around
+        self._Img = Query()
 
     def insert(self, image_id: str, document: dict) -> bool:
         """
-        Save a document.
-        Returns True if it was saved, False if image_id already existed (duplicate).
+        Save a document. Returns True if saved, False if duplicate.
+        Slide 10 idempotency guarantee.
         """
-        if image_id in self._store:
+
+        if self._db.search(self._Img.image_id == image_id):
             print(f"[Repository] Skipping duplicate — '{image_id}' already stored.")
             return False
-
-        self._store[image_id] = document
+        
+        
+        #otherwise, insert the document and return True
+        self._db.insert(document)
         print(f"[Repository] Stored document for '{image_id}'.")
         return True
 
+
     def get(self, image_id: str) -> dict | None:
         """Fetch a document by image_id. Returns None if not found."""
-        return self._store.get(image_id)
+        #search for the matching document
+        
+        results = self._db.search(self._Img.image_id == image_id)
+        return results[0] if results else None
 
     def all(self) -> dict:
-        """Return all stored documents."""
-        return dict(self._store)
+        """Return all stored documents as {image_id: doc}."""
+
+        return {doc["image_id"]: doc for doc in self._db.all()}
+       
+
 
     def clear(self):
-        """Clears the store in tests between runs."""
-        self._store.clear()
+        """Wipe all data (used in tests)."""
+        
+        self._db.truncate()
