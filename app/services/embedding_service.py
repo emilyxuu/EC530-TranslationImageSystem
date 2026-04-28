@@ -89,7 +89,7 @@ def process_event(event_data):
         embedding = [random.random() for _ in range(EMBEDDING_DIM)]
         print(f"[{SERVICE_NAME}] No match for {image_id}, using random fallback")
     
-    # TODO: build the embedding.created event with create_base_event
+    # build the embedding.created event with create_base_event
     #       topic = EMBEDDING_CREATED
     #       payload should contain: image_id, embedding, dim (the vector length)
     new_event =  create_base_event(
@@ -101,9 +101,7 @@ def process_event(event_data):
             },
         )
     
-    
-    
-    # TODO: publish the event with publish_message
+    # publish the event with publish_message
     publish_message(EMBEDDING_CREATED, new_event)
     
     print(f"[{SERVICE_NAME}] Published embedding.created for {image_id}")
