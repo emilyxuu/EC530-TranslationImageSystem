@@ -53,6 +53,8 @@ def process_event(event_data: dict):
             "source": payload.get("source", ""),
             "inserted": inserted,
             "doc_id": f"doc_{image_id}",
+            "detected_text": annotations.get("detected_text", ""),
+            "translation_english": annotations.get("translation_english", ""),
         },
     )
     publish_message(ANNOTATION_STORED, outgoing_event)

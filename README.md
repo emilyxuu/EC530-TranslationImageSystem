@@ -97,9 +97,15 @@ python -m app.services.ocr_translation_service
 python -m app.services.document_db_service
 
 # Terminal 3 — triggers the pipeline
-python -m app.services.upload_service
+python -m app.services.query_service
+
+#Terminal 4
+python -m app.services.cli_service upload /uploads/french_stop.jpg
+python -m app.services.cli_service search stop
 ```
 
+sudo service redis-server start
+redis-cli ping
 ## Running Unit Tests
 ```bash
 pytest tests/ -v

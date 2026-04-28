@@ -1,0 +1,72 @@
+{
+  "concept_axes": [
+    "stop_sign", "yield_sign", "warning_sign", "exit_sign",
+    "speed_limit", "parking_sign", "red_color", "yellow_color"
+  ],
+  "label_embeddings": {
+    "stop":         [1.0, 0.1, 0.2, 0.0, 0.0, 0.0, 0.9, 0.0],
+    "yield":        [0.1, 1.0, 0.3, 0.0, 0.0, 0.0, 0.2, 0.7],
+    "warning":      [0.2, 0.3, 1.0, 0.1, 0.1, 0.1, 0.3, 0.6],
+    "exit":         [0.0, 0.0, 0.1, 1.0, 0.0, 0.1, 0.1, 0.0],
+    "speed limit":  [0.0, 0.0, 0.1, 0.0, 1.0, 0.1, 0.4, 0.0],
+    "parking":      [0.0, 0.0, 0.1, 0.1, 0.1, 1.0, 0.0, 0.1]
+  },
+  "images": [
+    {
+      "image_id": "sign_001",
+      "label": "stop",
+      "objects": [
+        {"label": "stop_sign", "bbox": [10, 20, 200, 210], "conf": 0.97}
+      ],
+      "embedding": [0.95, 0.1, 0.2, 0.0, 0.0, 0.0, 0.9, 0.0]
+    },
+    {
+      "image_id": "sign_002",
+      "label": "yield",
+      "objects": [
+        {"label": "yield_sign", "bbox": [15, 25, 180, 195], "conf": 0.93}
+      ],
+      "embedding": [0.1, 0.95, 0.3, 0.0, 0.0, 0.0, 0.2, 0.7]
+    },
+    {
+      "image_id": "sign_003",
+      "label": "warning",
+      "objects": [
+        {"label": "warning_sign", "bbox": [20, 30, 190, 200], "conf": 0.91}
+      ],
+      "embedding": [0.2, 0.3, 0.92, 0.1, 0.1, 0.1, 0.3, 0.6]
+    },
+    {
+      "image_id": "sign_004",
+      "label": "exit",
+      "objects": [
+        {"label": "exit_sign", "bbox": [12, 18, 175, 185], "conf": 0.89}
+      ],
+      "embedding": [0.05, 0.0, 0.1, 0.96, 0.0, 0.1, 0.1, 0.0]
+    },
+    {
+      "image_id": "sign_005",
+      "label": "speed limit",
+      "objects": [
+        {"label": "speed_limit_sign", "bbox": [22, 28, 188, 198], "conf": 0.94}
+      ],
+      "embedding": [0.0, 0.0, 0.1, 0.0, 0.97, 0.1, 0.4, 0.0]
+    },
+    {
+      "image_id": "sign_006",
+      "label": "parking",
+      "objects": [
+        {"label": "parking_sign", "bbox": [18, 22, 192, 202], "conf": 0.90}
+      ],
+      "embedding": [0.0, 0.0, 0.1, 0.1, 0.1, 0.95, 0.0, 0.1]
+    },
+    {
+      "image_id": "sign_007",
+      "label": "stop",
+      "objects": [
+        {"label": "stop_sign", "bbox": [25, 35, 195, 205], "conf": 0.92}
+      ],
+      "embedding": [0.93, 0.15, 0.18, 0.0, 0.0, 0.0, 0.88, 0.05]
+    }
+  ]
+}
