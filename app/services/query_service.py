@@ -4,7 +4,7 @@ from pathlib import Path
 
 import faiss
 import numpy as np
-
+from sentence_transformers import SentenceTransformer
 from app.broker import subscribe_to, publish_message
 from app.schemas import create_base_event, is_valid_event
 from app.topics import (
@@ -17,6 +17,7 @@ from app.topics import (
 SERVICE_NAME = "Query Service"
 
 
+
 # Path to the dataset — needed for the label_embeddings used to convert
 # search queries into vectors.
 DATASET_PATH = Path("app/sample_data/embeddings.json")
@@ -26,11 +27,12 @@ _local_store = {}
 
 
 # Load label embeddings at startup so we can map "stop" → query vector.
-with open(DATASET_PATH) as f:
-    _label_embeddings = json.load(f)["label_embeddings"]
-print(f"[{SERVICE_NAME}] Loaded {len(_label_embeddings)} label embeddings")
+# Load CLIP at startup. ~10s first time; cached after.
+print(f"[{SERVICE_NAME}] Loading CLIP model...")
+_model = SentenceTransformer("clip-ViT-B-32")
+print(f"[{SERVICE_NAME}] CLIP loaded ({_model.get_sentence_embedding_dimension()} dim)")
 # Local view of the vector index, built from embedding.created events.
-EMBEDDING_DIM = 8
+EMBEDDING_DIM = 512
 _vector_index = faiss.IndexFlatIP(EMBEDDING_DIM)
 _position_to_image_id = []
 _image_id_to_position = {}
@@ -86,15 +88,8 @@ def search_documents(query_text, top_k=5):
     #       Match if the label appears in query_lower (substring match).
     #       If no label matches, return [] (no results).
     #       Hint: for label, vector in _label_embeddings.items(): ...
-    query_vector = None
-    for label, vector in _label_embeddings.items():
-        if label in query_lower:
-            query_vector = vector
-            break
-    
-    if query_vector is None:
-        print(f"[{SERVICE_NAME}] No matching label for query '{query_text}'")
-        return []
+    # Encode the query text with CLIP — produces a 512-dim semantic vector
+    query_vector = _model.encode(query_text).tolist()
     
     # compute similarity for every (image_id, stored_vector) in _vector_index.
     #       Append a dict to `matches` with image_id and score.

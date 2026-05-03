@@ -7,8 +7,8 @@ from app.topics import EMBEDDING_CREATED
 
 SERVICE_NAME = "Vector Index Service"
 
-# Vector dimensionality — must match the embeddings.json dataset
-EMBEDDING_DIM = 8
+# Vector dimensionality — 
+EMBEDDING_DIM = 512
 
 # FAISS index. IndexFlatIP = inner product (= cosine on normalized vectors).
 _index = faiss.IndexFlatIP(EMBEDDING_DIM)

@@ -87,8 +87,8 @@ def cmd_search(query_text, top_k=5):
         results = response["payload"].get("results", [])
         print(f"\nFound {len(results)} result(s):")
         for i, hit in enumerate(results, 1):
-            print(f"  {i}. {hit.get('image_id')}: "
-                  f"{hit.get('detected_text')!r} -> {hit.get('translation_english')!r}")
+            print(f"  {i}. {hit.get('image_id')} (score: {hit.get('score'):.3f}): "
+            f"{hit.get('detected_text')!r} -> {hit.get('translation_english')!r}")
         
         pubsub.close()
         return results

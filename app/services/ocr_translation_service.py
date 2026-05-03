@@ -18,11 +18,25 @@ def process_event(event_data: dict):
         return 
         
     image_id = event_data["payload"].get("image_id", "unknown")
+    path = event_data["payload"].get("path", "")
     print(f"[{SERVICE_NAME}] Received image: {image_id}. Processing...")
-    
-    # 2. PLACEHOLDER AI WORK (for now)
-    print(f"[{SERVICE_NAME}] Extracting text... Found: 'Arrêt'")
-    print(f"[{SERVICE_NAME}] Translating French to English... Result: 'Stop'")
+
+    # Stubbed OCR — derives text from the filename so different images get
+    # different annotations. Real OCR (e.g. pytesseract) would replace this.
+    filename = path.split("/")[-1].lower()
+    if "stop" in filename:
+        detected_text, source_language, translation_english = "Arrêt", "fr", "Stop"
+    elif "yield" in filename:
+        detected_text, source_language, translation_english = "Cédez", "fr", "Yield"
+    elif "exit" in filename:
+        detected_text, source_language, translation_english = "Sortie", "fr", "Exit"
+    elif "parking" in filename:
+        detected_text, source_language, translation_english = "Stationnement", "fr", "Parking"
+    else:
+        detected_text, source_language, translation_english = "Inconnu", "fr", "Unknown"
+
+    print(f"[{SERVICE_NAME}] Extracting text... Found: '{detected_text}'")
+    print(f"[{SERVICE_NAME}] Translating {source_language} to English... Result: '{translation_english}'")
     
     # Create a new event with the same base information but add our new annotations to the payload
     new_event = create_base_event(
@@ -32,9 +46,9 @@ def process_event(event_data: dict):
             "path": event_data["payload"].get("path", ""),
             "source": event_data["payload"].get("source", ""),
             "annotations": {
-                "detected_text": "Arrêt",
-                "source_language": "fr",
-                "translation_english": "Stop",
+                "detected_text": detected_text,
+                "source_language": source_language,
+                "translation_english": translation_english,
                 "confidence_score": 0.98,
             },
         },
