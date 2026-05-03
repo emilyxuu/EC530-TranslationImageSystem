@@ -1,10 +1,19 @@
+import json
+import threading
+from pathlib import Path
+
+import faiss
+import numpy as np
+
 from app.broker import subscribe_to, publish_message
 from app.schemas import create_base_event, is_valid_event
-from app.topics import QUERY_SUBMITTED, QUERY_COMPLETED, ANNOTATION_STORED, EMBEDDING_CREATED
-import math
-import json
-from pathlib import Path
-import threading
+from app.topics import (
+    QUERY_SUBMITTED,
+    QUERY_COMPLETED,
+    ANNOTATION_STORED,
+    EMBEDDING_CREATED,
+)
+
 SERVICE_NAME = "Query Service"
 
 
@@ -15,45 +24,40 @@ DATASET_PATH = Path("app/sample_data/embeddings.json")
 # Local view of documents, built from annotation.stored events.
 _local_store = {}
 
-def _dot_product(a, b):
-    return sum(x * y for x, y in zip(a, b))
-
-def _norm(v):
-    return math.sqrt(sum(x * x for x in v))
-
-def _cosine_similarity(a, b):
-    norm_a = _norm(a)
-    norm_b = _norm(b)
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return _dot_product(a, b) / (norm_a * norm_b)
-
-def handle_embedding_created(event_data):
-    """Subscriber: when a new embedding arrives, add it to our vector index."""
-    if not is_valid_event(event_data):
-        return
-    
-    payload = event_data["payload"]
-    image_id = payload.get("image_id")
-    embedding = payload.get("embedding")
-    
-    if not image_id or not embedding:
-        return
-    
-    _vector_index[image_id] = embedding
-    print(f"[{SERVICE_NAME}] Indexed vector for {image_id} (index size: {len(_vector_index)})")
-# Local view of the vector index, built from embedding.created events.
-_vector_index = {}
 
 # Load label embeddings at startup so we can map "stop" → query vector.
 with open(DATASET_PATH) as f:
     _label_embeddings = json.load(f)["label_embeddings"]
 print(f"[{SERVICE_NAME}] Loaded {len(_label_embeddings)} label embeddings")
-# Local view of documents, built from annotation.stored events.
-# This is proper event-sourcing — the Query Service doesn't share memory
-# with the Document DB service; it subscribes to annotation.stored and
-# keeps its own copy.
-_local_store = {}
+# Local view of the vector index, built from embedding.created events.
+EMBEDDING_DIM = 8
+_vector_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+_position_to_image_id = []
+_image_id_to_position = {}
+
+def _add_to_index(image_id, embedding):
+    """Add one (image_id, vector) pair to the FAISS index."""
+    if image_id in _image_id_to_position:
+        return
+    vector = np.array([embedding], dtype="float32")
+    faiss.normalize_L2(vector)
+    position = _vector_index.ntotal
+    _vector_index.add(vector)
+    _position_to_image_id.append(image_id)
+    _image_id_to_position[image_id] = position
+    
+def handle_embedding_created(event_data):
+    if not is_valid_event(event_data):
+        return
+    payload = event_data["payload"]
+    image_id = payload.get("image_id")
+    embedding = payload.get("embedding")
+    if not image_id or not embedding:
+        return
+    _add_to_index(image_id, embedding)
+    print(f"[{SERVICE_NAME}] Indexed vector for {image_id} (index size: {_vector_index.ntotal})")
+
+
 
 def handle_annotation_stored(event_data):
     """Subscriber: add new documents to our local view."""
@@ -94,16 +98,22 @@ def search_documents(query_text, top_k=5):
     
     # compute similarity for every (image_id, stored_vector) in _vector_index.
     #       Append a dict to `matches` with image_id and score.
-    matches = []
+    # Empty index? Return empty results.
+    if _vector_index.ntotal == 0:
+        return []
 
-    for image_id, stored_vector in _vector_index.items():
-        score = _cosine_similarity(query_vector, stored_vector)
-        matches.append({"image_id": image_id, "score": score})
-    # Sort highest score first
-    matches.sort(key=lambda m: m["score"], reverse=True)
-    
-    # Trim to top_k
-    matches = matches[:top_k]
+    query = np.array([query_vector], dtype="float32")
+    faiss.normalize_L2(query)
+
+    k = min(top_k, _vector_index.ntotal)
+    scores, positions = _vector_index.search(query, k=k)
+
+    matches = []
+    for score, position in zip(scores[0], positions[0]):
+        if position == -1:
+            continue
+        image_id = _position_to_image_id[position]
+        matches.append({"image_id": image_id, "score": float(score)})
     
     # Enrich results with detected_text and translation_english from _local_store
     # so the CLI can display them. _local_store may not have every image_id
