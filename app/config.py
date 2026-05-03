@@ -14,3 +14,8 @@ REDIS_DB = int(os.getenv("REDIS_DB", "0"))
 
 # Optional: Redis password (needed for Redis Cloud, not for local Redis)
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+
+# MongoDB connection settings.
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "image_annotation")
+MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "documents")
