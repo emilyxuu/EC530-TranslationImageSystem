@@ -1,4 +1,5 @@
-import math
+import faiss
+import numpy as np
 
 from app.broker import subscribe_to
 from app.schemas import is_valid_event
@@ -6,67 +7,76 @@ from app.topics import EMBEDDING_CREATED
 
 SERVICE_NAME = "Vector Index Service"
 
-# In-memory vector index: {image_id: vector}
-# Built up from embedding.created events as they arrive.
-_index = {}
+# Vector dimensionality — must match the embeddings.json dataset
+EMBEDDING_DIM = 8
 
-def _dot_product(a, b):
-    """Sum of element-wise products: a[0]*b[0] + a[1]*b[1] + ..."""
-    # use sum() with a generator expression that multiplies pairs from zip(a, b)
-    #       Hint: sum(x * y for x, y in zip(a, b))
-    return sum(x * y for x, y in zip(a, b))
+# FAISS index. IndexFlatIP = inner product (= cosine on normalized vectors).
+_index = faiss.IndexFlatIP(EMBEDDING_DIM)
 
-def _norm(v):
-    """Vector length (Euclidean norm): sqrt(v[0]**2 + v[1]**2 + ...)"""
-    # sum the squares of every element, then take the square root
-    #       Hint: sum(x * x for x in v) gives the sum of squares
-    #             math.sqrt(...) gives the square root
-    c = sum(x * x for x in v)
-    return math.sqrt(c)
+# FAISS uses integer positions for vectors. We need a parallel mapping
+# back to image_ids so search results can be reported by image_id.
+_position_to_image_id = []   # list: position → image_id
+_image_id_to_position = {}   # dict: image_id → position (used for dedup)
 
-def _cosine_similarity(a, b):
-    """
-    How aligned are vectors a and b in direction?
-    Returns 1.0 (identical direction), 0.0 (perpendicular), -1.0 (opposite).
+def _add_to_index(image_id, embedding):
+    """Add one (image_id, vector) pair to the FAISS index."""
     
-    Formula: dot(a, b) / (norm(a) * norm(b))
-    """
-    # Edge case: if either vector is all zeros, norm is 0 and we'd divide by zero.
-    # Return 0 in that case (no meaningful similarity).
-    norm_a = _norm(a)
-    norm_b = _norm(b)
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
+    # Idempotency: skip if we already indexed this image_id
+    if image_id in _image_id_to_position:
+        return
     
-    # return _dot_product(a, b) divided by (norm_a * norm_b)
-    dot_prod = _dot_product(a,b)
-    mult_a_b = norm_a * norm_b
+    # FAISS needs a numpy array shaped (1, dim) of float32
+    vector = np.array([embedding], dtype="float32")
     
-    return dot_prod / mult_a_b
+    # Normalize so that inner product equals cosine similarity
+    faiss.normalize_L2(vector)
+    
+    # The position assigned by FAISS = current index size BEFORE adding
+    position = _index.ntotal
+    
+    _index.add(vector)
+    
+    # Update the mappings so we can map the position back later
+    _position_to_image_id.append(image_id)
+    _image_id_to_position[image_id] = position
+
+
 
 def search_similar(query_vector, top_k=5):
-    """
-    Find the top_k stored vectors most similar to query_vector.
+    """Find the top_k stored vectors most similar to query_vector."""
     
-    Returns a list of dicts with image_id and score, sorted highest score first.
-    """
-    matches = []
+    # Empty index? Return empty results.
+    if _index.ntotal == 0:
+        return []
     
-    # loop through every image_id and stored_vector in _index
-    
-    for image_id, stored_vector in _index.items():
-        key = _cosine_similarity(query_vector, stored_vector)
-        matches.append({"image_id": image_id, "score": key})
+    # convert query_vector (a Python list) into a numpy float32 array
+    #       shaped (1, dim) — same shape as in _add_to_index
 
+    query = np.array([query_vector], dtype="float32")
     
-    matches.sort(key=lambda m: m["score"], reverse=True)
+    #normalize the query vector with faiss.normalize_L2()
     
-    return matches[:top_k]
+    faiss.normalize_L2(query)
+    # FAISS search. Don't ask for more results than we have.
+    k = min(top_k, _index.ntotal)
+    scores, positions = _index.search(query, k=k)
+    
+    # scores and positions are 2D arrays; we only made one query so take row 0
+    matches = []
+    for score, position in zip(scores[0], positions[0]):
+        # FAISS returns -1 for "no result" if k > ntotal
+        if position == -1:
+            continue
+        image_id = _position_to_image_id[position]
+        matches.append({
+            "image_id": image_id,
+            "score": float(score),   # convert numpy float to Python float
+        })
+    
+    return matches
     
 def handle_embedding_created(event_data):
-    """Subscriber: when a new embedding arrives, add it to the index."""
-    
-    # reject malformed events with is_valid_event (return early if invalid)
+    """Subscriber: when a new embedding arrives, add it to the FAISS index."""
     if not is_valid_event(event_data):
         return
     
@@ -74,15 +84,13 @@ def handle_embedding_created(event_data):
     image_id = payload.get("image_id")
     embedding = payload.get("embedding")
     
-    # Defensive check: only index if we have both an image_id and an embedding
     if not image_id or not embedding:
         return
     
-    _index[image_id] = embedding
-    print(f"[{SERVICE_NAME}] Indexed embedding for {image_id} (index size: {len(_index)})")
+    _add_to_index(image_id, embedding)
+    print(f"[{SERVICE_NAME}] Indexed embedding for {image_id} (index size: {_index.ntotal})")
     
-    
-    
+       
 if __name__ == "__main__":
     print(f"Starting {SERVICE_NAME}...")
     subscribe_to(EMBEDDING_CREATED, handle_embedding_created)
