@@ -146,6 +146,7 @@ The testing suite utilizes `pytest` to strictly verify the required system guara
 To run the full suite, execute the following from the root directory:
 ```bash
 pytest tests/ -v
+```
 
 ## LLM Usage
 
