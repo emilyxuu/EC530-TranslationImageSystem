@@ -136,7 +136,16 @@ CLIP-based embedding and FAISS-based search are *not* stubbed — they run on re
 
 ## Tests
 
-In progress. See `tests/` directory.
+The testing suite utilizes `pytest` to strictly verify the required system guarantees and defensive programming requirements:
+
+* **Schema Contracts:** Ensures all messages strictly adhere to the required event format (`test_schemas.py`).
+* **Robustness:** Proves the microservices gracefully drop malformed payloads and missing keys without crashing (`test_malformed_events.py`).
+* **Idempotency:** Verifies that injecting duplicate `event_id`s does not create duplicate state in the MongoDB repository (`test_duplicate_events.py`, `test_idempotency.py`).
+* **System Integration:** Simulates deterministic event generation and full end-to-end pipeline flow (`test_pipeline_flow.py`, `test_event_generator.py`).
+
+To run the full suite, execute the following from the root directory:
+```bash
+pytest tests/ -v
 
 ## LLM Usage
 
